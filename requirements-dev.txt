@@ -1,0 +1,11 @@
+# ============================================================
+# FinanceGPT — Development & Testing Dependencies
+# Install with: pip install -r requirements-dev.txt
+# ============================================================
+
+# Testing framework
+pytest
+pytest-mock
+
+# Include production deps too
+-r requirements.txt

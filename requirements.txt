@@ -1,0 +1,31 @@
+# ============================================================
+# FinanceGPT — Production Dependencies
+# ============================================================
+
+# UI
+gradio>=4.0
+
+# LLM & Orchestration
+langchain
+langchain-groq
+langchain-openai
+langchain-community
+langgraph
+
+# SQL Engine
+sqlalchemy
+
+# Data Processing
+pandas
+numpy
+scipy
+openpyxl
+
+# Visualization
+plotly
+
+# Code Execution Safety (stats node only)
+RestrictedPython
+
+# Configuration
+python-dotenv

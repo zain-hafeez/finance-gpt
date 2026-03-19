@@ -1,0 +1,16 @@
+date,region,product,quantity,unit_price,total_sales,salesperson
+2024-01-05,North,Widget A,10,25.00,250.00,Alice
+2024-01-07,South,Widget B,5,40.00,200.00,Bob
+2024-01-10,East,Widget A,8,25.00,200.00,Carol
+2024-01-12,West,Widget C,12,15.00,180.00,Alice
+2024-01-15,North,Widget B,3,40.00,120.00,Bob
+2024-02-02,South,Widget A,20,25.00,500.00,Carol
+2024-02-08,East,Widget C,7,15.00,105.00,Alice
+2024-02-14,West,Widget B,9,40.00,360.00,Bob
+2024-02-20,North,Widget A,15,25.00,375.00,Carol
+2024-02-25,South,Widget C,11,15.00,165.00,Alice
+2024-03-01,East,Widget B,6,40.00,240.00,Bob
+2024-03-10,West,Widget A,22,25.00,550.00,Carol
+2024-03-15,North,Widget C,14,15.00,210.00,Alice
+2024-03-20,South,Widget A,18,25.00,450.00,Bob
+2024-03-28,East,Widget B,4,40.00,160.00,Carol

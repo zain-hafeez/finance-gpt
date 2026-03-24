@@ -1,0 +1,4 @@
+date,region,product,quantity,unit price,total sales ($)
+2024-01-01,North,Widget A,10,25.00,250.00
+2024-01-02,South,Widget B,5,40.00,200.00
+2024-01-03,East,Widget A,8,25.00,200.00

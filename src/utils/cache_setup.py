@@ -17,8 +17,17 @@ That is acceptable for this portfolio MVP.
 """
 
 import logging
-from langchain.globals import set_llm_cache
-from langchain_community.cache import InMemoryCache
+try:
+    # LangChain >= 0.1.0
+    from langchain.globals import set_llm_cache
+except ImportError:
+    # LangChain 1.x
+    from langchain_core.globals import set_llm_cache
+
+try:
+    from langchain_community.cache import InMemoryCache
+except ImportError:
+    from langchain.cache import InMemoryCache
 from src.utils.config import CACHE_ENABLED
 
 logger = logging.getLogger(__name__)

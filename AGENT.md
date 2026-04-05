@@ -591,13 +591,13 @@ with SqliteSaver.from_conn_string("checkpoints.db") as saver:
 | Module | Name | Approach | Status | Notes |
 |--------|------|----------|--------|-------|
 | M0 | Project Setup | Custom | 🟢 Complete | |
-| M1 | Data Ingestion + SQLite | Custom | 🔴 Not Started | |
-| M2 | LLM Router | LangChain + custom fallback | 🔴 Not Started | |
-| M3 | SQL Engine | LangChain create_sql_query_chain | 🔴 Not Started | |
-| M4 | Stats Engine | Pandas/NumPy + RestrictedPython | 🔴 Not Started | |
-| M5 | Query Router | LangGraph conditional + Groq | 🔴 Not Started | |
-| M6 | LangGraph Workflow | LangGraph StateGraph | 🔴 Not Started | |
-| M7 | Query Caching | LangChain InMemoryCache | 🔴 Not Started | |
+| M1 | Data Ingestion + SQLite | Custom | 🟢 Complete | |
+| M2 | LLM Router | LangChain + custom fallback | 🟢 Complete | |
+| M3 | SQL Engine | LangChain create_sql_query_chain | 🟢 Complete | |
+| M4 | Stats Engine | Pandas/NumPy + RestrictedPython | 🟢 Complete | |
+| M5 | Query Router | LangGraph conditional + Groq | 🟢 Complete | |
+| M6 | LangGraph Workflow | LangGraph StateGraph | 🟢 Complete | |
+| M7 | Query Caching | LangChain InMemoryCache | 🟢 Complete | |
 | M8 | Gradio UI | Custom | 🔴 Not Started | |
 | M9 | State Persistence | LangGraph SQLite checkpointer | 🔴 Not Started | |
 | M10 | Testing Suite | pytest + pytest-mock | 🔴 Not Started | |

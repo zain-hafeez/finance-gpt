@@ -1,156 +1,139 @@
 # src/graph/workflow.py
 """
-LangGraph StateGraph — Full Pipeline Assembly
-=============================================
-Wires all nodes into a compiled graph with:
-  - App-level cache check at the front (skip entire pipeline on hit)
-  - LLM-powered router (sql vs stats)
-  - SQL or stats engine execution
-  - Plain-English explanation generation
-  - Cache write at the end (store result for future hits)
+LangGraph StateGraph — Module 6 + M7 (cache nodes) + M9 (checkpointer)
 
-Public API: run_query(question, file_path, db_path, session_id) -> dict
+Assembles the full pipeline:
+  START → cache_node → router_node → [sql_node | stats_node]
+        → explain_node → cache_write_node → END
+
+M9 adds: SqliteSaver checkpointer (persists state per thread_id/session_id)
 """
 
 import logging
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import StateGraph, END
 
 from src.graph.state import FinanceGPTState
-from src.graph.router import router_node, route_to_engine
 from src.graph.nodes import (
+    cache_node,
     sql_node,
     stats_node,
     explain_node,
-    cache_node,
     cache_write_node,
 )
-from src.utils.cache_setup import setup_cache
+from src.graph.router import router_node, route_to_engine  # ← router_node lives HERE, not in nodes.py
+from src.graph.checkpointer import get_checkpointer
 
 logger = logging.getLogger(__name__)
 
-# Enable LangChain InMemoryCache globally — runs once when module is imported
-setup_cache()
+_graph = None
 
 
-def _route_after_cache(state: dict) -> str:
-    """
-    Conditional edge function called after cache_node.
-
-    If the cache had a hit (cached=True), we go straight to END.
-    If cache miss (cached=False), we continue to the router.
-
-    This is the key routing decision that makes the cache work:
-    a cache hit completely skips all LLM calls and SQL execution.
-    """
-    if state.get('cached', False):
-        logger.info("[workflow] Cache hit — routing to END")
-        return 'end'
-    return 'router'
-
+def _should_skip_to_end(state: dict) -> str:
+    if state.get("cached", False):
+        return "end"
+    return "router"
+# Alias for backward compatibility with test_cache.py
+_route_after_cache = _should_skip_to_end
 
 def _build_graph():
-    """
-    Build and compile the LangGraph StateGraph.
-
-    Node execution order for a cache MISS:
-      cache_node → router_node → [sql_node OR stats_node] → explain_node → cache_write_node
-
-    Node execution order for a cache HIT:
-      cache_node → END  (everything else is skipped)
-    """
     graph = StateGraph(FinanceGPTState)
 
-    # --- Register all nodes ---
-    graph.add_node('cache_check', cache_node)
-    graph.add_node('router', router_node)
-    graph.add_node('sql_node', sql_node)
-    graph.add_node('stats_node', stats_node)
-    graph.add_node('explain', explain_node)
-    graph.add_node('cache_write', cache_write_node)
+    graph.add_node("cache_node", cache_node)
+    graph.add_node("router_node", router_node)
+    graph.add_node("sql_node", sql_node)
+    graph.add_node("stats_node", stats_node)
+    graph.add_node("explain_node", explain_node)
+    graph.add_node("cache_write_node", cache_write_node)
 
-    # --- Wire the edges ---
+    graph.set_entry_point("cache_node")
 
-    # Entry point → cache check first
-    graph.add_edge(START, 'cache_check')
-
-    # After cache check: hit → END, miss → router
     graph.add_conditional_edges(
-        'cache_check',
-        _route_after_cache,
-        {'end': END, 'router': 'router'}
+        "cache_node",
+        _should_skip_to_end,
+        {
+            "end": END,
+            "router": "router_node",
+        },
     )
 
-    # Router → sql_node or stats_node (existing M5 conditional edge)
     graph.add_conditional_edges(
-        'router',
+        "router_node",
         route_to_engine,
-        {'sql': 'sql_node', 'stats': 'stats_node'}
+        {
+            "sql": "sql_node",
+            "stats": "stats_node",
+        },
     )
 
-    # Both engine paths converge at explain_node
-    graph.add_edge('sql_node', 'explain')
-    graph.add_edge('stats_node', 'explain')
+    graph.add_edge("sql_node", "explain_node")
+    graph.add_edge("stats_node", "explain_node")
+    graph.add_edge("explain_node", "cache_write_node")
+    graph.add_edge("cache_write_node", END)
 
-    # After explanation → write to cache → done
-    graph.add_edge('explain', 'cache_write')
-    graph.add_edge('cache_write', END)
+    checkpointer = get_checkpointer()
+    compiled = graph.compile(checkpointer=checkpointer)
+    logger.info("[workflow] Graph compiled with checkpointer: %s", type(checkpointer).__name__)
+    return compiled
 
-    return graph.compile()
 
-
-# Compile once at module load — reused for all queries
-_graph = _build_graph()
+def get_graph():
+    global _graph
+    if _graph is None:
+        _graph = _build_graph()
+    return _graph
 
 
 def run_query(
     question: str,
     file_path: str,
     db_path: str,
-    session_id: str = 'default'
+    session_id: str = "default"
 ) -> dict:
-    """
-    Single public API for the entire FinanceGPT pipeline.
+    graph = get_graph()
 
-    Args:
-        question:   User's plain English question
-        file_path:  Path to the uploaded CSV/Excel file
-        db_path:    Path to the SQLite database file
-        session_id: Session identifier (used by M9 checkpointer)
+    config = {"configurable": {"thread_id": session_id}}
 
-    Returns dict with keys:
-        success      bool   — True if no error occurred
-        explanation  str    — Plain English answer for the user
-        query_type   str    — 'sql' or 'stats'
-        sql_query    str|None — Generated SQL (SQL path only)
-        stats_code   str|None — Generated Python code (stats path only)
-        raw_result   Any    — Raw data from the engine
-        cached       bool   — True if result came from cache
-        error        str|None — Error message if something failed
-    """
     initial_state = {
-        'file_path':   file_path,
-        'db_path':     db_path,
-        'query':       question.strip(),
-        'session_id':  session_id,
-        'query_type':  '',
-        'cached':      False,
-        'sql_query':   None,
-        'sql_valid':   False,
-        'stats_code':  None,
-        'raw_result':  None,
-        'explanation': '',
-        'error':       None,
+        "file_path": file_path,
+        "db_path": db_path,
+        "query": question,
+        "session_id": session_id,
+        "query_type": "",
+        "cached": False,
+        "sql_query": None,
+        "sql_valid": False,
+        "stats_code": None,
+        "raw_result": None,
+        "explanation": "",
+        "error": None,
     }
 
-    final_state = _graph.invoke(initial_state)
+    try:
+        final_state = graph.invoke(initial_state, config=config)
+        logger.info(
+            "[workflow] Query complete | session=%s | type=%s | cached=%s",
+            session_id,
+            final_state.get("query_type", "?"),
+            final_state.get("cached", False),
+        )
+        return {
+            "query_type":  final_state.get("query_type", ""),
+            "sql_query":   final_state.get("sql_query"),
+            "stats_code":  final_state.get("stats_code"),
+            "raw_result":  final_state.get("raw_result"),
+            "explanation": final_state.get("explanation", ""),
+            "error":       final_state.get("error"),
+            "cached":      final_state.get("cached", False),
+        }
 
-    return {
-        'success':     final_state.get('error') is None,
-        'explanation': final_state.get('explanation', ''),
-        'query_type':  final_state.get('query_type', ''),
-        'sql_query':   final_state.get('sql_query'),
-        'stats_code':  final_state.get('stats_code'),
-        'raw_result':  final_state.get('raw_result'),
-        'cached':      final_state.get('cached', False),
-        'error':       final_state.get('error'),
-    }
+    except Exception as e:
+        logger.error("[workflow] Graph execution failed: %s", e, exc_info=True)
+        return {
+            "query_type":  "",
+            "sql_query":   None,
+            "stats_code":  None,
+            "raw_result":  None,
+            "explanation": f"An error occurred: {str(e)}",
+            "error":       str(e),
+            "cached":      False,
+        }

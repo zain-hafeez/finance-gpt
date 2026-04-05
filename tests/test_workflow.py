@@ -28,9 +28,7 @@ def _make_mock_llm(response_text: str):
     mock_llm.invoke.return_value = mock_response
     return mock_llm
 
-
-EXPECTED_KEYS = {"success", "explanation", "query_type", "sql_query",
-                 "stats_code", "raw_result", "error"}
+EXPECTED_KEYS = {"query_type", "sql_query", "stats_code", "raw_result", "explanation", "error", "cached"}
 
 # Patch target — the one place get_llm actually lives
 GET_LLM = "src.utils.llm_router.get_llm"
@@ -73,7 +71,8 @@ def test_run_query_sql_path_returns_success(tmp_path):
             db_path=str(db_path),
         )
 
-    assert result["success"] is True
+    assert result["error"] is None
+    assert result["explanation"] != ""
     assert result["query_type"] == "sql"
     assert EXPECTED_KEYS.issubset(result.keys())
 
@@ -114,7 +113,8 @@ def test_run_query_stats_path_returns_success(tmp_path):
             db_path=str(db_path),
         )
 
-    assert result["success"] is True
+    assert result["error"] is None
+    assert result["explanation"] != ""
     assert result["query_type"] == "stats"
     assert EXPECTED_KEYS.issubset(result.keys())
 
@@ -125,20 +125,19 @@ def test_run_query_stats_path_returns_success(tmp_path):
 
 def test_run_query_empty_question_returns_error():
     result = run_query(question="", file_path="some/path.csv", db_path="some/db.db")
-    assert result["success"] is False
     assert result["error"] is not None
     assert EXPECTED_KEYS.issubset(result.keys())
 
 
 def test_run_query_missing_file_path_returns_error():
     result = run_query(question="What is total sales?", file_path="", db_path="some/db.db")
-    assert result["success"] is False
+    assert result["error"] is not None
     assert EXPECTED_KEYS.issubset(result.keys())
 
 
 def test_run_query_missing_db_path_returns_error():
     result = run_query(question="What is total sales?", file_path="some/path.csv", db_path="")
-    assert result["success"] is False
+    assert result["error"] is not None
     assert EXPECTED_KEYS.issubset(result.keys())
 
 

@@ -59,6 +59,13 @@ def _build_restricted_globals(df, np, pd, scipy_stats=None):
     restricted_globals['np'] = np          # NumPy
     restricted_globals['math'] = math      # Standard math
     restricted_globals['datetime'] = datetime  # Date handling
+
+    # RestrictedPython guards — required for pandas/numpy operations
+    restricted_globals['_getiter_']    = iter
+    restricted_globals['_getattr_']    = getattr
+    restricted_globals['_getitem_']    = lambda obj, key: obj[key]
+    restricted_globals['_write_']      = lambda obj: obj        # allows df['col'] = ...
+    restricted_globals['_inplacevar_'] = lambda op, x, y: eval(f'x {op} y', {'x': x, 'y': y})
     
     # Inject scipy if available (needed for linear regression forecasting)
     if scipy_stats is not None:

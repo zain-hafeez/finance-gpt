@@ -99,7 +99,7 @@ class TestFormatStatus:
     def test_error_result_shows_error_indicator(self):
         """Failed pipeline result should show error indicator."""
         from src.ui.components import format_status
-        result = {'success': False}
+        result = {'error': 'Something went wrong'}
         status = format_status(result, 3.1)
         assert '❌' in status
 

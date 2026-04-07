@@ -34,3 +34,11 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# SQLite databases and temp files
+finance.db
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+*.db-shm
+*.db-wal

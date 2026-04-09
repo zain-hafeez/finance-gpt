@@ -1,0 +1,49 @@
+# docker-compose.yml
+# Defines how to run FinanceGPT locally using Docker.
+#
+# Commands:
+#   docker-compose up --build    ← build image and start (first time)
+#   docker-compose up            ← start without rebuilding
+#   docker-compose down          ← stop and remove container
+#   docker-compose logs -f       ← view live logs
+
+version: '3.8'
+
+services:
+  financegpt:
+
+    # Build from our Dockerfile in the current directory
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Name the running container
+    container_name: financegpt-app
+
+    # Map port 7860 inside container → port 7860 on your machine
+    # After running: open http://localhost:7860
+    ports:
+      - "7860:7860"
+
+    # Pass API keys from your .env file into the container.
+    # The container can't read .env directly (excluded by .dockerignore)
+    # but docker-compose reads it and injects values as environment variables.
+    # This is the secure way — keys never baked into the image.
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DB_PATH=/app/data/finance.db
+      - CHECKPOINTS_DB=/app/data/checkpoints.db
+      - MAX_FILE_SIZE_MB=10
+      - CACHE_ENABLED=true
+
+    # Mount a volume so databases persist between container restarts.
+    # Without this, every restart wipes the databases because containers
+    # are stateless — they start fresh each time.
+    # Format: "host_folder:container_folder"
+    volumes:
+      - ./data:/app/data
+
+    # Auto-restart if app crashes — production reliability pattern.
+    # "unless-stopped" = always restart EXCEPT when you manually stop it.
+    restart: unless-stopped

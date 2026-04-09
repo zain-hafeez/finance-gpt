@@ -11,6 +11,7 @@ langchain-groq
 langchain-openai
 langchain-community
 langgraph
+langgraph-checkpoint-sqlite
 
 # SQL Engine
 sqlalchemy

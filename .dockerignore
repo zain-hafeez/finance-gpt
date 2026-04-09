@@ -1,0 +1,42 @@
+# Virtual environment — Docker installs its own packages from requirements.txt
+venv/
+.venv/
+env/
+
+# API keys — NEVER go inside a Docker image
+.env
+
+# Python cache — not needed in container
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Test files — not needed to run the production app
+tests/
+pytest.ini
+.pytest_cache/
+.coverage
+
+# Git history — not needed in container
+.git/
+.gitignore
+
+# Local databases — container creates its own fresh ones at runtime
+finance.db
+checkpoints.db
+checkpoints.db-shm
+checkpoints.db-wal
+
+# IDE files
+.vscode/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docs — not needed to run the app
+docs/
